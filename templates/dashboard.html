@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eBook Library</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="dashboard">
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('dashboard') }}" class="nav-brand">eBook Library</a>
+            <ul class="nav-menu">
+                {% if logged_in %}
+                    <li class="nav-item">
+                        <span class="nav-welcome">Welcome, {{ session.username }}!</span>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('submit') }}" class="nav-link upload-btn">Submit a Book</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('contact') }}" class="nav-link upload-btn">📩 Contact Support</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('logout') }}" class="nav-link logout-btn">Logout</a>
+                    </li>
+                {% else %}
+                    <li class="nav-item">
+                        <a href="{{ url_for('auth') }}" class="nav-link login-btn">Login / Sign Up</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages dashboard-flash">
+                    {% for category, message in messages %}
+                        {% if category != 'popup-success' %}
+                            <div class="flash flash-{{ category }}">{{ message }}</div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="ebooks-section">
+            <div class="collection-header">
+                <h2>Explore Our Collection</h2>
+                <div class="filters-container">
+                    <!-- Updated Search Form -->
+                    <div class="search-form">
+                        <input type="text" id="searchInput" name="search" placeholder="Search by title or author..." value="{{ search_query or '' }}">
+                    </div>
+                    <!-- New Category Filter -->
+                    <div class="category-filter">
+                        <select id="categoryFilter">
+                            <option value="">All Categories</option>
+                            {% for category in categories %}
+                                <option value="{{ category.category_id }}">{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="ebook-grid" id="ebookGrid">
+                {% if ebooks %}
+                    {% for ebook in ebooks %}
+                        <div class="ebook-card">
+                            <div class="ebook-icon">📖</div>
+                            <h3>{{ ebook.title }}</h3>
+                            <p class="ebook-author">by {{ ebook.author_name }}</p>
+                            <p class="ebook-genre">{{ ebook.genre or 'General' }}</p>
+                            
+                            {% if logged_in %}
+                                <a href="{{ url_for('view_full_ebook', ebook_id=ebook.ebook_id) }}" target="_blank" class="btn-read">Read Now</a>
+                                {% if ebook.price > 0 %}
+                                    <a href="{{ url_for('buy_ebook', ebook_id=ebook.ebook_id) }}" class="btn-buy">Buy for ₹{{ "%.2f"|format(ebook.price) }}</a>
+                                {% else %}
+                                    <a href="{{ url_for('view_full_ebook', ebook_id=ebook.ebook_id) }}" download="{{ ebook.file_path }}" class="btn-download">Download</a>
+                                {% endif %}
+                            {% else %}
+                                <a href="{{ url_for('view_preview_ebook', ebook_id=ebook.ebook_id) }}" target="_blank" class="btn-preview">Preview</a>
+                                {% if ebook.price > 0 %}
+                                    <span class="ebook-price">Login to buy for ₹{{ "%.2f"|format(ebook.price) }}</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="no-results">No books found. Please try again or <a href="{{ url_for('dashboard') }}">view all books</a>.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Submission Success Popup Card -->
+    <div id="successPopup" class="popup-overlay" style="display: none;">
+        <div class="popup-card">
+            <span class="popup-close" onclick="closePopup()">&times;</span>
+            <div class="popup-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="80px" height="80px">
+                    <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            <h2>Submission Successful!</h2>
+            <p>Your book is now undergoing our AI-powered review. Thank you for your contribution!</p>
+        </div>
+    </div>
+
+    <!-- JavaScript for Live Search & Filtering -->
+    <script>
+        const isLoggedIn = {{ logged_in|tojson }};
+        const searchInput = document.getElementById('searchInput');
+        const categoryFilter = document.getElementById('categoryFilter');
+        const ebookGrid = document.getElementById('ebookGrid');
+
+        let debounceTimeout;
+        const debounce = (func, delay) => {
+            return (...args) => {
+                clearTimeout(debounceTimeout);
+                debounceTimeout = setTimeout(() => {
+                    func.apply(this, args);
+                }, delay);
+            };
+        };
+
+        const performSearch = async () => {
+            const query = searchInput.value;
+            const categoryId = categoryFilter.value;
+            try {
+                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&category=${encodeURIComponent(categoryId)}`);
+                if (!response.ok) throw new Error('Network response was not ok');
+                const books = await response.json();
+                renderBooks(books);
+            } catch (error) {
+                console.error('Error fetching search results:', error);
+                ebookGrid.innerHTML = '<p class="no-results">An error occurred while searching. Please try again later.</p>';
+            }
+        };
+
+        const renderBooks = (books) => {
+            ebookGrid.innerHTML = ''; 
+
+            if (books.length === 0) {
+                ebookGrid.innerHTML = `<p class="no-results">No books found matching your criteria. Please try again or <a href="{{ url_for('dashboard') }}">view all books</a>.</p>`;
+                return;
+            }
+
+            books.forEach(book => {
+                const card = document.createElement('div');
+                card.className = 'ebook-card';
+
+                let buttonsHTML = '';
+                if (isLoggedIn) {
+                    buttonsHTML += `<a href="/view/${book.id}" target="_blank" class="btn-read">Read Now</a>`;
+                    if (book.price > 0) {
+                        buttonsHTML += `<a href="/buy/${book.id}" class="btn-buy">Buy for ₹${book.price.toFixed(2)}</a>`;
+                    } else {
+                        buttonsHTML += `<a href="/view/${book.id}" download="${book.file_path}" class="btn-download">Download</a>`;
+                    }
+                } else {
+                    buttonsHTML += `<a href="/view/preview/${book.id}" target="_blank" class="btn-preview">Preview</a>`;
+                    if (book.price > 0) {
+                        buttonsHTML += `<span class="ebook-price">Login to buy for ₹${book.price.toFixed(2)}</span>`;
+                    }
+                }
+
+                card.innerHTML = `
+                    <div class="ebook-icon">📖</div>
+                    <h3>${book.title}</h3>
+                    <p class="ebook-author">by ${book.author_name}</p>
+                    <p class="ebook-genre">${book.genre}</p>
+                    ${buttonsHTML}
+                `;
+                ebookGrid.appendChild(card);
+            });
+        };
+        
+        // --- Pop-up Logic ---
+        function closePopup() {
+            document.getElementById('successPopup').style.display = 'none';
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initial load is now handled by the Jinja template, 
+            // the script is only for dynamic updates.
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        {% if category == 'popup-success' %}
+                            document.getElementById('successPopup').style.display = 'flex';
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        });
+
+        searchInput.addEventListener('input', debounce(performSearch, 300));
+        categoryFilter.addEventListener('change', performSearch);
+    </script>
+</body>
+</html>
+

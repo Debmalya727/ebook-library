@@ -1,0 +1,58 @@
+/* EBOOK STORE - BASE DESIGN SYSTEM */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+:root {
+    /* Color Palette */
+    --primary-color: #3B82F6; /* A vibrant, modern blue */
+    --primary-hover: #2563EB;
+    --secondary-color: #F97316; /* A warm, inviting orange for accents */
+    --secondary-hover: #EA580C;
+    --bg-dark: #111827;       /* Deep navy background */
+    --bg-light: #1F2937;      /* Lighter navy for cards/surfaces */
+    --text-primary: #F9FAFB;  /* Off-white for primary text */
+    --text-secondary: #9CA3AF;/* Gray for secondary text */
+    --border-color: #374151;
+    --success-color: #10B981;
+    --error-color: #EF4444;
+
+    /* Typography */
+    --font-family-sans: 'Poppins', sans-serif;
+
+    /* Spacing & Sizing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    --header-height: 70px;
+
+    /* Borders & Shadows */
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+    --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --box-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+}
+
+/* --- Global Resets & Body Styling --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family-sans);
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+a:hover {
+    color: var(--primary-hover);
+}

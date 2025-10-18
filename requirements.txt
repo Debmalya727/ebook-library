@@ -1,0 +1,13 @@
+Flask
+Flask-SQLAlchemy
+Flask-Bcrypt
+PyMySQL
+cryptography
+PyPDF2
+Flask-Mail
+python-dotenv
+google-generativeai
+razorpay
+setuptools
+coinbase-commerce
+Flask-Migrate

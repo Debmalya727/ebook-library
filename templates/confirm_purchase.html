@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Your Purchase</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="form-body">
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('dashboard') }}" class="nav-brand">eBook Library</a>
+        </div>
+    </nav>
+
+    <div class="success-container">
+        <h2>Confirm Your Purchase</h2>
+        <p>You are about to purchase "{{ ebook.title }}" for <strong>${{ "%.2f"|format(ebook.price) }}</strong>.</p>
+        <p>This is a simulated transaction for testing purposes. No real payment will be processed.</p>
+        
+        <form action="{{ url_for('payment_success', ebook_id=ebook.ebook_id) }}" method="POST">
+            <button type="submit" class="btn-back">Confirm Purchase</button>
+        </form>
+        <a href="{{ url_for('dashboard') }}" style="display: block; margin-top: 1rem; color: #ccc;">Cancel</a>
+    </div>
+</body>
+</html>

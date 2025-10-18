@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit a Book</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='forms_style.css') }}">
+</head>
+<body class="form-body">
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('dashboard') }}" class="nav-brand">eBook Library</a>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="{{ url_for('dashboard') }}" class="nav-link">← Back to Library</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="form-container">
+        <h2>Submit a Book for Review</h2>
+        <p>Your submission will be reviewed by an administrator before being published.</p>
+
+        <form action="{{ url_for('submit') }}" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="title">Book Title</label>
+                <input type="text" id="title" name="title" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="author">Author's Name</label>
+                <input type="text" id="author" name="author" class="form-control" required>
+            </div>
+            <!-- New Category Dropdown -->
+            <div class="form-group">
+                <label for="category_id">Suggested Category</label>
+                <select id="category_id" name="category_id" class="form-control" required>
+                    <option value="" disabled selected>-- Select a Category --</option>
+                    {% for category in categories %}
+                        <option value="{{ category.category_id }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="ebook_file">eBook File (PDF only)</label>
+                <input type="file" id="ebook_file" name="ebook_file" class="form-control" accept=".pdf" required>
+            </div>
+            <button type="submit" class="btn-submit">Submit for Review</button>
+        </form>
+    </div>
+</body>
+</html>
+

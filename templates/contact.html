@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Support</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #f5f7fb;
+            margin: 0;
+            padding: 0;
+        }
+
+        nav {
+            background: linear-gradient(90deg, #4b6cb7, #182848);
+            color: #fff;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-brand {
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 25px;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: #ffcc00;
+        }
+
+        .form-container {
+            max-width: 600px;
+            background: white;
+            margin: 60px auto;
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #333;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #444;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 15px;
+            transition: border-color 0.2s ease;
+        }
+
+        input:focus, textarea:focus {
+            border-color: #4b6cb7;
+            outline: none;
+        }
+
+        button {
+            width: 100%;
+            background: linear-gradient(90deg, #4b6cb7, #182848);
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: linear-gradient(90deg, #182848, #4b6cb7);
+        }
+
+        .success {
+            text-align: center;
+            background: #e0f7e9;
+            color: #2b8a3e;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .error {
+            text-align: center;
+            background: #fde4e4;
+            color: #c0392b;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-brand">📘 eBook Dashboard</div>
+        <div class="nav-links">
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('submit') }}">Submit Book</a>
+            <a href="{{ url_for('logout') }}">Logout</a>
+        </div>
+    </nav>
+
+    <div class="form-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <h2>Contact Support</h2>
+        <form method="POST">
+            <label>Email</label>
+            <input type="email" name="email" required placeholder="Your email">
+
+            <label>Subject</label>
+            <input type="text" name="subject" required placeholder="Issue or question topic">
+
+            <label>Message</label>
+            <textarea name="message" rows="6" required placeholder="Describe your issue or feedback..."></textarea>
+
+            <button type="submit">Send Message</button>
+        </form>
+    </div>
+</body>
+</html>

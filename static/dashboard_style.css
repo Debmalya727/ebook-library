@@ -1,0 +1,335 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+/* --- General Resets & Body Styling --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body.dashboard {
+    font-family: 'Poppins', sans-serif;
+    background-color: #F4F7FC; /* Lighter, cleaner background */
+    color: #1A202C; /* Dark charcoal text for readability */
+}
+
+/* --- Modern Navbar --- */
+.navbar {
+    background-color: #FFFFFF;
+    padding: 1.25rem 2rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    border-bottom: 1px solid #E2E8F0;
+}
+
+.nav-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+.nav-brand {
+    color: #DD6B20; /* A richer, warmer orange */
+    font-size: 1.75rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.nav-brand:hover {
+    color: #C05621;
+}
+
+.nav-menu {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+}
+
+.nav-welcome {
+    color: #4A5568;
+    font-weight: 500;
+}
+
+.nav-link {
+    color: #2D3748;
+    text-decoration: none;
+    font-weight: 600;
+    padding: 0.6rem 1.2rem;
+    border-radius: 25px;
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+    background-color: #EDF2F7;
+    color: #1A202C;
+}
+
+.login-btn, .upload-btn {
+    background-color: #DD6B20;
+    color: #FFFFFF;
+}
+
+.login-btn:hover, .upload-btn:hover {
+    background-color: #C05621;
+    color: #FFFFFF;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(221, 107, 32, 0.3);
+}
+
+/* --- Main Dashboard Container --- */
+.dashboard-container {
+    max-width: 1600px;
+    margin: 2.5rem auto;
+    padding: 0 2rem;
+}
+
+/* --- Search and Filter Bar --- */
+.collection-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.collection-header h2 {
+    font-size: 2.25rem;
+    color: #1A202C;
+}
+
+.filters-container {
+    display: flex;
+    gap: 1.5rem; /* Increased gap */
+    flex-wrap: wrap;
+    align-items: center; /* Align items vertically */
+}
+
+/* --- THIS IS THE FIX --- */
+/* Changed .search-input to #searchInput to match the element's ID */
+#searchInput {
+    padding: 0.9rem 1.5rem 0.9rem 2.75rem; /* Increased left padding for icon */
+    font-size: 1.05rem;
+    border-radius: 30px;
+    border: 1px solid #CBD5E0;
+    background-color: #FFFFFF;
+    min-width: 300px;
+    transition: all 0.3s ease;
+    /* New Search Icon */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23A0AEC0' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 1rem center;
+}
+
+#searchInput::placeholder {
+    color: #A0AEC0;
+}
+
+.category-filter select {
+    padding: 0.9rem 1.5rem;
+    font-size: 1.05rem;
+    border-radius: 30px;
+    border: 1px solid #CBD5E0;
+    background: #FFFFFF;
+    min-width: 300px;
+    transition: all 0.3s ease;
+}
+
+/* Updated focus rule to use the ID */
+#searchInput:focus, .category-filter select:focus {
+    outline: none;
+    border-color: #DD6B20;
+    box-shadow: 0 0 0 4px rgba(221, 107, 32, 0.2); /* Enhanced focus ring */
+}
+
+/* --- Modern eBook Grid & Cards --- */
+.ebook-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 2.5rem;
+}
+
+.ebook-card {
+    background-color: #FFFFFF;
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.07);
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.ebook-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.ebook-icon {
+    font-size: 4rem;
+    line-height: 1;
+    margin-bottom: 1rem;
+}
+
+.ebook-card h3 {
+    font-size: 1.25rem;
+    color: #1A202C;
+    margin-bottom: 0.5rem;
+    min-height: 60px;
+}
+
+.ebook-author {
+    color: #718096;
+    font-weight: 500;
+    margin-bottom: 1rem;
+}
+
+.ebook-genre {
+    background-color: #EDF2F7;
+    color: #4A5568;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    display: inline-block;
+    margin: 0 auto 1.5rem auto;
+}
+
+/* --- Refined Button Styles --- */
+.ebook-card a, .ebook-card span {
+    display: block;
+    margin-top: 0.5rem;
+    text-decoration: none;
+    font-weight: 600;
+    padding: 0.75rem 1rem;
+    border-radius: 25px;
+    transition: all 0.3s ease;
+}
+
+.btn-preview, .btn-read {
+    background-color: #2D3748;
+    color: #FFFFFF;
+}
+.btn-preview:hover, .btn-read:hover {
+    background-color: #1A202C;
+    transform: scale(1.05);
+}
+
+.btn-buy {
+    background-color: #DD6B20;
+    color: #FFFFFF;
+}
+.btn-buy:hover {
+    background-color: #C05621;
+    transform: scale(1.05);
+}
+
+.btn-download {
+    background-color: #38A169;
+    color: #FFFFFF;
+}
+.btn-download:hover {
+    background-color: #2F855A;
+    transform: scale(1.05);
+}
+
+.ebook-price {
+    color: #718096;
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding-top: 0.75rem;
+}
+
+.no-results {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 4rem;
+    font-size: 1.25rem;
+    color: #718096;
+}
+
+/* --- Submission Success Popup --- */
+.popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(8px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+
+.popup-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.popup-card {
+    background: #1A202C;
+    padding: 2.5rem 3rem;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    text-align: center;
+    max-width: 500px;
+    position: relative;
+    color: #FFFFFF;
+    transform: scale(0.9);
+    transition: transform 0.4s ease;
+}
+
+.popup-overlay.active .popup-card {
+    transform: scale(1);
+}
+
+.popup-close {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 2.5rem;
+    line-height: 1;
+    color: #A0AEC0;
+    cursor: pointer;
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.popup-close:hover {
+    color: #FFFFFF;
+    transform: rotate(90deg);
+}
+
+.popup-icon {
+    color: #38A169;
+    margin-bottom: 1.5rem;
+}
+
+.popup-card h2 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #FFFFFF;
+    margin-bottom: 1rem;
+}
+
+.popup-card p {
+    font-size: 1.1rem;
+    color: #CBD5E0;
+    line-height: 1.6;
+}
+

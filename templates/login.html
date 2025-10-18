@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>eBook Library - Authentication</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='auth_style.css') }}">
+</head>
+<body class="auth-page">
+
+    <div class="container">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="curved-shape"></div>
+        <div class="curved-shape2"></div>
+
+        <!-- Login Form -->
+        <div class="form-box Login">
+            <h2 class="animation" style="--D:0; --S:21">Login</h2>
+            <form action="{{ url_for('auth') }}" method="POST">
+                <input type="hidden" name="login" value="1">
+                <div class="input-box animation" style="--D:1; --S:22">
+                    <input type="text" name="username" required>
+                    <label>Username</label>
+                    <box-icon type='solid' name='user' color="#fff"></box-icon>
+                </div>
+                <div class="input-box animation" style="--D:2; --S:23">
+                    <input type="password" name="password" required>
+                    <label>Password</label>
+                    <box-icon name='lock-alt' type='solid' color="#fff"></box-icon>
+                </div>
+                <button type="submit" class="btn animation" style="--D:3; --S:24">Login</button>
+                <div class="regi-link animation" style="--D:4; --S:25">
+                    <p>Don't have an account? <a href="#" class="SignUpLink">Sign Up</a></p>
+                </div>
+            </form>
+        </div>
+
+        <div class="info-content Login">
+            <h2 class="animation" style="--D:0; --S:20">WELCOME Back!</h2>
+            <p class="animation" style="--D:1; --S:21">We are happy to have you with us.</p>
+        </div>
+
+        <!-- Registration Form -->
+        <div class="form-box Register">
+            <h2 class="animation" style="--li:17; --S:0">Register</h2>
+            <form action="{{ url_for('auth') }}" method="POST">
+                <input type="hidden" name="register" value="1">
+                <div class="input-box animation" style="--li:18; --S:1">
+                    <input type="text" name="first_name" required>
+                    <label>First Name</label>
+                </div>
+                 <div class="input-box animation" style="--li:18; --S:1">
+                    <input type="text" name="last_name" required>
+                    <label>Last Name</label>
+                </div>
+                <div class="input-box animation" style="--li:18; --S:1">
+                    <input type="text" name="username" required>
+                    <label>Username</label>
+                    <box-icon type='solid' name='user' color="#fff"></box-icon>
+                </div>
+                <div class="input-box animation" style="--li:19; --S:2">
+                    <input type="email" name="email" required>
+                    <label>Email</label>
+                    <box-icon name='envelope' type='solid' color="#fff"></box-icon>
+                </div>
+                <div class="input-box animation" style="--li:19; --S:3">
+                    <input type="password" name="password" required>
+                    <label>Password</label>
+                    <box-icon name='lock-alt' type='solid' color="#fff"></box-icon>
+                </div>
+
+                <!-- Admin Toggle and Code Field -->
+                <div class="admin-toggle-container animation" style="--li:20; --S:4">
+                    <label class="switch">
+                        <input type="checkbox" id="adminToggle" name="admin_toggle">
+                        <span class="slider"></span>
+                    </label>
+                    <label for="adminToggle" class="toggle-label">Register as Administrator</label>
+                </div>
+                <div id="adminCodeBox" class="input-box animation" style="--li:20; --S:4; display: none;">
+                    <input type="text" name="admin_code">
+                    <label>Admin Code</label>
+                </div>
+
+                <button type="submit" class="btn animation" style="--li:20; --S:4">Register</button>
+                <div class="regi-link animation" style="--li:21; --S:5">
+                    <p>Already have an account? <a href="#" class="SignInLink">Sign In</a></p>
+                </div>
+            </form>
+        </div>
+
+        <div class="info-content Register">
+            <h2 class="animation" style="--li:17; --S:0">WELCOME!</h2>
+            <p class="animation" style="--li:18; --S:1">We’re delighted to have you here.</p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="https://unpkg.com/boxicons@2.1.4/dist/boxicons.js"></script>
+
+</body>
+</html>
+

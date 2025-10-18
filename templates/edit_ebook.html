@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit eBook</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="form-body">
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('admin_dashboard') }}" class="nav-brand">Admin Panel</a>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="{{ url_for('admin_dashboard') }}" class="nav-link">← Back to Dashboard</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="form-container">
+        <h2>Edit "{{ ebook.title }}"</h2>
+        <p>Update the book's details below.</p>
+        
+        <form action="{{ url_for('edit_ebook', ebook_id=ebook.ebook_id) }}" method="POST">
+            <div class="form-group">
+                <label for="title">Book Title</label>
+                <input type="text" id="title" name="title" class="form-control" value="{{ ebook.title }}" required>
+            </div>
+            <!-- This field is now required to match the database model -->
+            <div class="form-group">
+                <label for="author_name">Author's Name</label>
+                <input type="text" id="author_name" name="author_name" class="form-control" value="{{ ebook.author_name }}" required>
+            </div>
+            <div class="form-group">
+                <label for="category_id">Category</label>
+                <select id="category_id" name="category_id" class="form-control" required>
+                    {% for category in categories %}
+                        <option value="{{ category.category_id }}" {% if ebook.category_id == category.category_id %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="genre">Genre (Optional)</label>
+                <input type="text" id="genre" name="genre" class="form-control" value="{{ ebook.genre or '' }}">
+            </div>
+            <div class="form-group">
+                <label for="price">Price (e.g., 4.99)</label>
+                <input type="number" step="0.01" id="price" name="price" class="form-control" value="{{ ebook.price }}">
+            </div>
+            <button type="submit" class="btn-submit">Save Changes</button>
+        </form>
+    </div>
+</body>
+</html>
+

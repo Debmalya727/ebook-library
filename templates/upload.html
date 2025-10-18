@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Upload Book</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='forms_style.css') }}">
+</head>
+<body class="form-body">
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('admin_dashboard') }}" class="nav-brand">Admin Panel</a>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="{{ url_for('admin_dashboard') }}" class="nav-link">← Back to Dashboard</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="form-container">
+        <h2>Publish a New eBook</h2>
+        <p>Fill out the details below to add a new book to the library.</p>
+        
+        <form action="{{ url_for('admin_upload') }}" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="title">Book Title</label>
+                <input type="text" id="title" name="title" class="form-control" required>
+            </div>
+            <!-- This field is now required to match the database model -->
+            <div class="form-group">
+                <label for="author_name">Author's Name</label>
+                <input type="text" id="author_name" name="author_name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="category_id">Category</label>
+                <select id="category_id" name="category_id" class="form-control" required>
+                    <option value="" disabled selected>-- Select a Category --</option>
+                    {% for category in categories %}
+                        <option value="{{ category.category_id }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="genre">Genre (Optional)</label>
+                <input type="text" id="genre" name="genre" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="price">Price (e.g., 4.99)</label>
+                <input type="number" step="0.01" id="price" name="price" class="form-control" value="0.00">
+            </div>
+            <div class="form-group">
+                <label for="ebook_file">eBook File (PDF only)</label>
+                <input type="file" id="ebook_file" name="ebook_file" class="form-control" accept=".pdf" required>
+            </div>
+            <button type="submit" class="btn-submit">Publish Book</button>
+        </form>
+    </div>
+</body>
+</html>
+

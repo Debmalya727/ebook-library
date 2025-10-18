@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Your Purchase</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .checkout-container {
+            max-width: 500px;
+            margin: 4rem auto;
+            padding: 2.5rem;
+            background: #2c2c34;
+            border-radius: 10px;
+            border: 1px solid #444;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+        .checkout-container h2 {
+            color: #e46033;
+            margin-bottom: 1rem;
+        }
+        .checkout-container p {
+            color: #ddd;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+        .item-price {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 2rem;
+        }
+        .payment-options {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .payment-button {
+            display: block;
+            width: 100%;
+            padding: 0.8rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+        #rzp-button {
+            background-color: #3B82F6; /* Blue for Razorpay */
+        }
+        #rzp-button:hover {
+            background-color: #2563EB;
+        }
+        #crypto-button {
+            background-color: #F7931A; /* Orange for Crypto/Bitcoin */
+        }
+        #crypto-button:hover {
+            background-color: #e68917;
+        }
+    </style>
+</head>
+<body class="form-body">
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('dashboard') }}" class="nav-brand">eBook Library</a>
+        </div>
+    </nav>
+
+    <div class="checkout-container">
+        <h2>Choose Your Payment Method</h2>
+        <p>You are purchasing:</p>
+        <h3>{{ ebook.title }}</h3>
+        <p class="item-price">₹{{ "%.2f"|format(ebook.price) }}</p>
+        
+        <div class="payment-options">
+            <!-- Razorpay Button -->
+            <button id="rzp-button" class="payment-button">Pay with Razorpay (Card, UPI)</button>
+
+            <!-- Crypto Button -->
+            <a href="{{ url_for('buy_crypto', ebook_id=ebook.ebook_id) }}" id="crypto-button" class="payment-button">Pay with Crypto</a>
+        </div>
+    </div>
+
+    <!-- Razorpay's Checkout Script -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+        var options = {
+            "key": "{{ api_key }}",
+            "amount": "{{ order.amount }}", 
+            "currency": "INR",
+            "name": "eBook Library",
+            "description": "Purchase of {{ ebook.title }}",
+            "order_id": "{{ order.id }}",
+            "handler": function (response){
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = "{{ url_for('payment_verification') }}";
+
+                var hiddenField1 = document.createElement('input');
+                hiddenField1.type = 'hidden';
+                hiddenField1.name = 'razorpay_payment_id';
+                hiddenField1.value = response.razorpay_payment_id;
+                form.appendChild(hiddenField1);
+
+                var hiddenField2 = document.createElement('input');
+                hiddenField2.type = 'hidden';
+                hiddenField2.name = 'razorpay_order_id';
+                hiddenField2.value = response.razorpay_order_id;
+                form.appendChild(hiddenField2);
+
+                var hiddenField3 = document.createElement('input');
+                hiddenField3.type = 'hidden';
+                hiddenField3.name = 'razorpay_signature';
+                hiddenField3.value = response.razorpay_signature;
+                form.appendChild(hiddenField3);
+
+                document.body.appendChild(form);
+                form.submit();
+            },
+            "prefill": {
+                "name": "{{ customer_name }}",
+                "email": "{{ customer_email }}"
+            },
+            "theme": {
+                "color": "#3399cc"
+            }
+        };
+        var rzp1 = new Razorpay(options);
+        document.getElementById('rzp-button').onclick = function(e){
+            rzp1.open();
+            e.preventDefault();
+        }
+    </script>
+</body>
+</html>
