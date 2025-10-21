@@ -11,11 +11,3 @@ __pycache__/
 
 # Database migrations
 migrations/
-
-# User-uploaded files
-# We ignore all files inside, but keep the folders thanks to .gitkeep
-static/ebooks/*
-!static/ebooks/.gitkeep
-
-static/temp_uploads/*
-!static/temp_uploads/.gitkeep

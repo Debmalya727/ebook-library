@@ -17,7 +17,8 @@ import threading
 import razorpay
 from coinbase_commerce.client import Client # Import Coinbase Commerce
 from flask_migrate import Migrate
-
+import boto3
+import io
 
 load_dotenv()
 
@@ -38,16 +39,28 @@ app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() in ['true
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 
-# # AI Configuration
-# try:
-#     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-#     # NEW, CORRECTED LINE
-#     # Ensure this line uses 'gemini-pro'
-#     gemini_model = genai.GenerativeModel('gemini-pro')
-#     print("[*] Google Gemini AI configured successfully.")
-# except Exception as e:
-#     gemini_model = None
-#     print(f"[!] Warning: Could not configure Gemini AI. Error: {e}")
+# --- S3 Initialization ---
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+AWS_BUCKET_NAME = os.getenv('AWS_BUCKET_NAME')
+AWS_REGION = os.getenv('AWS_REGION')
+s3_client = None # Initialize as None
+try:
+    if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and AWS_BUCKET_NAME and AWS_REGION:
+        s3_client = boto3.client(
+           "s3",
+           aws_access_key_id=AWS_ACCESS_KEY_ID,
+           aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+           region_name=AWS_REGION 
+        )
+        # Optional: Check if bucket exists/is accessible (can slow startup)
+        # s3_client.head_bucket(Bucket=AWS_BUCKET_NAME) 
+        print("[*] AWS S3 client configured successfully.")
+    else:
+        print("[!] Warning: Missing AWS S3 credentials or config in environment variables.")
+except Exception as e:
+    print(f"[!] Warning: Could not configure AWS S3 client. Error: {e}")
+# --- End S3 Initialization ---
 
 # --- Razorpay Configuration ---
 RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID')
@@ -203,14 +216,18 @@ def verify_book_with_google_api(title, author, ai_assessment_text=None):
 
 import shutil
 
-def process_submission_in_background(app, temp_path, filename, title, author, category_name, submitter_username):
-    """Background process: analyze + verify + email + auto-upload if valid"""
+def process_submission_in_background(app, pdf_bytes, filename, title, author, category_name, submitter_username):
+    """Background process: analyze, verify, email, and upload to S3 if valid."""
     with app.app_context():
-        permanent_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        # Check if the S3 client is available
+        if not s3_client:
+            print("[!] S3 Client not available in background task. Cannot upload.")
+            s3_upload_status = "❌ Cloud Storage Error"
+        else:
+            s3_upload_status = "Pending Validation"
+
         try:
-            # Read PDF bytes
-            with open(temp_path, 'rb') as f:
-                pdf_bytes = f.read()
+            # The pdf_bytes are already in memory, no need to read from a file.
 
             # Step 1: Analyze content with Gemini
             ai_report = analyze_ebook_content_with_gemini(pdf_bytes)
@@ -218,46 +235,49 @@ def process_submission_in_background(app, temp_path, filename, title, author, ca
             # Step 2: Verify book authenticity via Google Books API
             book_check = verify_book_with_google_api(title, author, ai_report['assessment'])
 
-            # Step 3: Auto-upload if verified
+            # Step 3: Auto-upload to S3 if verified
             auto_status = "⚠️ Requires Manual Review"
-            if book_check["verified"]:
+            if book_check["verified"] and s3_client:
                 try:
                     category = Category.query.filter_by(name=category_name).first()
                     category_id = category.category_id if category else None
+                    
+                    # Wrap the raw bytes in a file-like object for boto3
+                    pdf_file_stream = io.BytesIO(pdf_bytes)
 
-                    # Add ebook record to DB
+                    # Upload the file stream to S3
+                    s3_client.upload_fileobj(
+                        pdf_file_stream,
+                        AWS_BUCKET_NAME,
+                        filename,
+                        ExtraArgs={'ContentType': 'application/pdf'}
+                    )
+                    
+                    s3_upload_status = f"✅ Uploaded ({filename})"
+                    
+                    # The S3 filename (key) to store in the database
+                    file_identifier_for_db = filename 
+
+                    # Add ebook record to DB with the S3 filename
                     new_ebook = Ebook(
                         title=title,
                         author_name=author,
                         genre=category_name,
                         price=0.0,
-                        file_path=filename,
+                        file_path=file_identifier_for_db,
                         category_id=category_id
                     )
                     db.session.add(new_ebook)
                     db.session.commit()
-                    auto_status = "✅ AUTO-UPLOADED"
+                    auto_status = "✅ AUTO-UPLOADED to Cloud"
 
-                    # Move PDF to permanent folder
-                    if not os.path.exists(permanent_path):
-                        shutil.move(temp_path, permanent_path)
-                        print(f"[*] PDF moved to permanent folder: {permanent_path}")
-                    else:
-                        print(f"[!] PDF already exists in permanent folder: {permanent_path}")
-
-                except Exception as db_error:
-                    print(f"[!] Auto-upload failed: {db_error}")
-                    auto_status = f"❌ Auto-upload failed: {db_error}"
+                except Exception as upload_error:
+                    db.session.rollback() # Rollback DB changes if S3 upload failed
+                    print(f"[!] S3 Auto-upload failed: {upload_error}")
+                    auto_status = f"❌ S3 Upload failed: {upload_error}"
+                    s3_upload_status = f"❌ Upload Failed: {upload_error}"
 
             # Step 4: Send admin email
-            # Attach the permanent file (if moved) or temp file as fallback
-            attach_bytes = None
-            if os.path.exists(permanent_path):
-                with open(permanent_path, 'rb') as f:
-                    attach_bytes = f.read()
-            else:
-                attach_bytes = pdf_bytes
-
             msg = Message(
                 subject=f"New eBook Submission: {title}",
                 sender=app.config['MAIL_USERNAME'],
@@ -279,20 +299,16 @@ Submitted by: {submitter_username}
 --- BOOK VALIDATION (via Google Books API) ---
 {book_check['message']}
 Confidence: {book_check['confidence']}
-Status: {auto_status}
+Auto-Upload Status: {auto_status}
+S3 Upload Status: {s3_upload_status} 
 """
-            msg.attach(filename, 'application/pdf', attach_bytes)
+            # Attach the original PDF bytes directly to the email
+            msg.attach(filename, 'application/pdf', pdf_bytes)
             mail.send(msg)
             print(f"[*] Admin email sent for {filename}")
 
         except Exception as e:
             print(f"[!] Error in background task for {filename}: {e}")
-
-        finally:
-            # Remove temp file only if it still exists (wasn't moved)
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-
 
 # --- Decorators for access control ---
 def login_required(f):
@@ -408,29 +424,134 @@ def logout():
 
 # --- Book Viewing Routes ---
 @app.route('/view/<int:ebook_id>')
-@login_required
+@login_required # Ensures only logged-in users can access
 def view_full_ebook(ebook_id):
-    ebook = db.session.get(Ebook, ebook_id)
-    return send_from_directory(app.config['UPLOAD_FOLDER'], ebook.file_path)
+    # Check if S3 client is available
+    if not s3_client:
+        flash('Cloud storage (S3) is not configured.', 'danger')
+        return redirect(url_for('dashboard'))
 
+    # Get ebook record from database
+    ebook = db.session.get(Ebook, ebook_id)
+
+    # Check if ebook exists and has a file path (S3 key)
+    if not ebook or not ebook.file_path:
+        flash('Book file reference not found in database.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    try:
+        # The filename stored in db is the Key for the object in S3
+        s3_key = ebook.file_path 
+
+        # Generate a pre-signed URL for the S3 object
+        # This URL grants temporary access (e.g., 1 hour) to download the file
+        download_url = s3_client.generate_presigned_url(
+            'get_object',
+            Params={
+                'Bucket': AWS_BUCKET_NAME, 
+                'Key': s3_key},
+            ExpiresIn=3600  # URL is valid for 3600 seconds (1 hour)
+        )
+
+        # Redirect the user's browser to the temporary S3 download URL
+        return redirect(download_url)
+
+    except Exception as e:
+        # Handle potential errors (e.g., file not found in S3, AWS credentials issue)
+        print(f"[!] Error generating S3 pre-signed URL for key '{s3_key}': {e}")
+        flash(f'Error retrieving file from cloud storage: {e}', 'danger')
+        return redirect(url_for('dashboard'))
+
+@app.route('/download/<int:ebook_id>')
+@login_required 
+def download_ebook(ebook_id): # New function name
+    if not s3_client:
+        flash('Cloud storage (S3) is not configured.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    ebook = db.session.get(Ebook, ebook_id)
+    if not ebook or not ebook.file_path:
+        flash('Book file reference not found.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    try:
+        s3_key = ebook.file_path 
+
+        # Generate a pre-signed URL that FORCES download
+        download_url = s3_client.generate_presigned_url(
+            'get_object',
+            Params={
+                'Bucket': AWS_BUCKET_NAME, 
+                'Key': s3_key,
+                # ADDED: Force download via Content-Disposition
+                'ResponseContentDisposition': f'attachment; filename="{s3_key}"' 
+            },
+            ExpiresIn=3600  # URL is valid for 1 hour
+        )
+        
+        # Redirect to the S3 URL - Browser will prompt for download
+        return redirect(download_url)
+        
+    except Exception as e:
+        print(f"[!] Error generating S3 pre-signed URL for key '{s3_key}': {e}")
+        flash(f'Error retrieving file from cloud storage: {e}', 'danger')
+        return redirect(url_for('dashboard'))
+    
 @app.route('/view/preview/<int:ebook_id>')
 def view_preview_ebook(ebook_id):
+    # Check if the S3 client is available
+    if not s3_client:
+        flash('Cloud storage (S3) is not configured.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    # Get the ebook record from the database
     ebook = db.session.get(Ebook, ebook_id)
-    full_path = os.path.join(app.config['UPLOAD_FOLDER'], ebook.file_path)
+
+    # Check if the ebook record and its file path exist
+    if not ebook or not ebook.file_path:
+        flash('Book file reference not found in database.', 'danger')
+        return redirect(url_for('dashboard'))
+
     try:
-        reader = PdfReader(full_path)
+        # The filename stored in the database is the Key for the object in S3
+        s3_key = ebook.file_path
+
+        # Download the S3 object's content directly into memory
+        s3_object = s3_client.get_object(Bucket=AWS_BUCKET_NAME, Key=s3_key)
+        s3_file_content_bytes = s3_object['Body'].read()
+        
+        # Wrap the downloaded bytes in a file-like object (BytesIO) for PyPDF2
+        s3_file_stream = io.BytesIO(s3_file_content_bytes)
+
+        # --- The rest of your PyPDF2 logic remains the same ---
+        reader = PdfReader(s3_file_stream)
         writer = PdfWriter()
         num_pages = len(reader.pages)
         preview_pages = min(num_pages, 10)
+
+        if preview_pages == 0:
+            flash('Cannot generate preview: PDF appears to be empty or unreadable.', 'warning')
+            return redirect(url_for('dashboard'))
+
         for i in range(preview_pages):
             writer.add_page(reader.pages[i])
-        
-        preview_buffer = BytesIO()
+
+        # Create the new preview PDF in a separate in-memory buffer
+        preview_buffer = io.BytesIO()
         writer.write(preview_buffer)
-        preview_buffer.seek(0)
-        
-        return send_file(preview_buffer, as_attachment=False, download_name=f'preview_{ebook.file_path}', mimetype='application/pdf')
+        preview_buffer.seek(0) # Rewind the buffer to the beginning
+
+        # Send the generated preview PDF to the user's browser
+        return send_file(
+            preview_buffer,
+            mimetype='application/pdf',
+            as_attachment=False,  # Display inline, not as a download
+            download_name=f'preview_{s3_key}'
+        )
+
     except Exception as e:
+        # Catch errors from S3 (e.g., file not found) or PyPDF2 (e.g., corrupted PDF)
+        print(f"[!] Error generating preview for S3 key '{s3_key}': {e}")
         flash(f'Could not generate preview: {e}', 'danger')
         return redirect(url_for('dashboard'))
 
@@ -442,7 +563,8 @@ def submit():
         title = request.form['title']
         author = request.form['author']
         category_id = request.form.get('category_id')
-        ebook_file = request.files['ebook_file']
+        # Use .get() for safer file access
+        ebook_file = request.files.get('ebook_file') 
         
         category_name = "N/A"
         if category_id:
@@ -450,23 +572,36 @@ def submit():
             if category:
                 category_name = category.name
 
-        if ebook_file and ebook_file.filename.endswith('.pdf'):
+        # Check if the file exists, has a name, and is a PDF
+        if ebook_file and ebook_file.filename and ebook_file.filename.lower().endswith('.pdf'):
             filename = secure_filename(ebook_file.filename)
-            temp_path = os.path.join(app.config['TEMP_UPLOAD_FOLDER'], filename)
-            ebook_file.save(temp_path)
             
-            # Updated thread creation
-            thread = threading.Thread(
-                target=process_submission_in_background,
-                args=(app, temp_path, filename, title, author, category_name, session.get('username'))
-            )
-            thread.start()
-            
-            flash('Your book has been submitted successfully!', 'popup-success')
-            return redirect(url_for('dashboard'))
+            try:
+                # Read the file's content directly into memory (bytes)
+                # No more saving to a temporary file on disk
+                pdf_bytes = ebook_file.read()
+
+                # Pass the pdf_bytes directly to the background thread
+                # The 'temp_path' argument is no longer needed
+                thread = threading.Thread(
+                    target=process_submission_in_background,
+                    args=(app, pdf_bytes, filename, title, author, category_name, session.get('username'))
+                )
+                thread.start()
+                
+                flash('Your book has been submitted successfully for automated review!', 'popup-success')
+                return redirect(url_for('dashboard'))
+
+            except Exception as e:
+                print(f"[!] Error in /submit route while processing file: {e}")
+                flash(f"An error occurred during submission: {e}", 'danger')
+                # Redirect back to the submit page on error
+                return redirect(url_for('submit'))
         else:
             flash('Please upload a valid PDF file.', 'warning')
+            # Stay on the submit page if the file is invalid
 
+    # This part for the GET request remains the same
     categories = Category.query.order_by(Category.name).all()
     return render_template('submit.html', categories=categories)
 
@@ -592,32 +727,67 @@ def admin_dashboard():
 @app.route('/admin-upload', methods=['GET', 'POST'])
 @admin_required
 def admin_upload():
+    # Check if S3 client was successfully initialized
+    if not s3_client:
+        flash('Cloud storage (S3) is not configured or failed to initialize.', 'danger')
+        return redirect(url_for('admin_dashboard')) # Redirect if S3 isn't ready
+
     if request.method == 'POST':
         title = request.form['title']
         author_name = request.form['author_name']
-        genre = request.form.get('genre') 
+        genre = request.form.get('genre')
         price = request.form.get('price', 0.0)
         category_id = request.form.get('category_id')
-        ebook_file = request.files['ebook_file']
-        
+        # Use .get() for safer access in case file is missing
+        ebook_file = request.files.get('ebook_file') 
+
         if not category_id:
             flash('Please select a category.', 'danger')
             return redirect(url_for('admin_upload'))
 
-        if ebook_file and ebook_file.filename.endswith('.pdf'):
-            filename = secure_filename(ebook_file.filename)
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            ebook_file.save(file_path)
-            
-            new_ebook = Ebook(title=title, author_name=author_name, genre=genre, price=float(price), file_path=filename, category_id=category_id)
-            db.session.add(new_ebook)
-            db.session.commit()
-            
-            flash(f'"{title}" has been successfully uploaded.', 'success')
-            return redirect(url_for('admin_dashboard'))
-        else:
-            flash('Invalid file. Please upload a PDF.', 'danger')
+        # Check if ebook_file exists, has a filename, and ends with .pdf
+        if ebook_file and ebook_file.filename and ebook_file.filename.lower().endswith('.pdf'):
+            # Create a secure filename to use as the Key in S3
+            filename = secure_filename(ebook_file.filename) 
 
+            try:
+                # Upload the file stream directly to S3
+                # 'ebook_file' is already a file-like object, perfect for upload_fileobj
+                s3_client.upload_fileobj(
+                    ebook_file,              # The file stream from Flask request
+                    AWS_BUCKET_NAME,         # Your S3 bucket name
+                    filename,                # The desired filename (key) in S3
+                    ExtraArgs={'ContentType': 'application/pdf'} # Set the correct MIME type
+                )
+
+                # Store the S3 filename (key) in the database
+                file_identifier_for_db = filename
+
+                # Save ebook details to database
+                new_ebook = Ebook(
+                    title=title,
+                    author_name=author_name,
+                    genre=genre,
+                    price=float(price),
+                    file_path=file_identifier_for_db, # Save S3 filename/key
+                    category_id=category_id
+                )
+                db.session.add(new_ebook)
+                db.session.commit()
+
+                flash(f'"{title}" has been successfully uploaded to cloud storage.', 'success')
+                return redirect(url_for('admin_dashboard'))
+
+            except Exception as e:
+                db.session.rollback() # Rollback DB changes if S3 upload fails
+                print(f"[!] Error uploading to S3: {e}") # Log the specific error
+                flash(f'Error uploading file to cloud storage (S3): {e}', 'danger')
+                return redirect(url_for('admin_upload'))
+        else:
+            flash('Invalid or missing file. Please upload a PDF.', 'danger')
+            # Stay on the upload page if the file is invalid
+
+    # GET request logic: Fetch categories and render the upload form
     categories = Category.query.order_by(Category.name).all()
     return render_template('upload.html', categories=categories)
 

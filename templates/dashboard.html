@@ -77,10 +77,11 @@
                             
                             {% if logged_in %}
                                 <a href="{{ url_for('view_full_ebook', ebook_id=ebook.ebook_id) }}" target="_blank" class="btn-read">Read Now</a>
+                                
                                 {% if ebook.price > 0 %}
                                     <a href="{{ url_for('buy_ebook', ebook_id=ebook.ebook_id) }}" class="btn-buy">Buy for ₹{{ "%.2f"|format(ebook.price) }}</a>
                                 {% else %}
-                                    <a href="{{ url_for('view_full_ebook', ebook_id=ebook.ebook_id) }}" download="{{ ebook.file_path }}" class="btn-download">Download</a>
+                                    <a href="{{ url_for('download_ebook', ebook_id=ebook.ebook_id) }}" class="btn-download">Download</a>
                                 {% endif %}
                             {% else %}
                                 <a href="{{ url_for('view_preview_ebook', ebook_id=ebook.ebook_id) }}" target="_blank" class="btn-preview">Preview</a>
