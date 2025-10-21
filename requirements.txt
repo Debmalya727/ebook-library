@@ -12,3 +12,4 @@ setuptools
 coinbase-commerce
 Flask-Migrate
 boto3
+gunicorn
